@@ -1,0 +1,60 @@
+---
+title: "Лабораторна робота №2"
+author: "Здобувач вищої освіти групи КІ-25-1 Болотнікова Милана"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    theme: cosmo
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+
+library(rio)
+library(ggplot2)
+library(knitr)
+
+
+b0 <- 3
+b1 <- -1
+b2 <- 2
+
+
+x <- seq(-2, 2, 0.1)
+
+y <- b0 + b1 * x + b2 * x^2
+
+
+plot(x, y, 
+     type = "l", 
+     col = "red", 
+     lwd = 2,
+     main = "Базовий графік функції (Варіант 10)", 
+     xlab = "x", 
+     ylab = "y")
+points(x, y, col = "blue")
+
+
+df <- data.frame(x = x, y = y)
+export(df, "data/data_variant10.csv")
+df_new <- import("data/data_variant10.csv")
+
+
+kable(head(df_new), caption = "Табл. 1. Фрагмент таблиці даних для 10 варіанту")
+
+
+df_new |> 
+  ggplot(aes(x = x, y = y)) +
+  geom_line(col = "darkgreen", size = 1) +
+  geom_point(col = "purple", alpha = 0.7) +
+  labs(title = "Графік функції засобами ggplot2", 
+       subtitle = "y = 3 - x + 2x^2",
+       x = "Вхідне значення (X)", 
+       y = "Результат функції (Y)") +
+  theme_minimal()
+```

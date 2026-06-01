@@ -1,0 +1,89 @@
+---
+title: "Лабораторна робота № 4. Перевірка статистичних гіпотез щодо закону розподілу"
+author: "Здобувач вищої освіти групи КІ-25-1 Болотнікова Милана"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    theme: cosmo
+    highlight: tango
+---
+
+# 1. Постановка завдання
+Мета: Засвоїти ідею методики перевірки статистичних гіпотез щодо закону розподілу випадкової величини, набути навичок використання параметричних та непараметричних критеріїв згоди у середовищі RStudio.
+
+Відповідно до індивідуального варіанту, досліджується випадкова величина $X \sim U(-2; 4)$.
+
+Формулювання гіпотез:
+* $H_0$: Вибіркові дані узгоджуються з теоретичним нормальним законом розподілу.
+* $H_1$: Вибіркові дані НЕ узгоджуються з нормальним законом розподілу.
+
+```{r}
+set.seed(252157)
+a <- -2
+b <- 4
+n_small <- 100
+n_large <- 1000
+
+data_small <- runif(n_small, min = a, max = b)
+data_large <- runif(n_large, min = a, max = b)
+
+df_analysis <- data.frame(
+  x50 = c(data_small, rep(NA, n_large - n_small)), 
+  x1000 = data_large
+)
+
+calc_shape_metrics <- function(x) {
+  x <- x[!is.na(x)]
+  n <- length(x)
+  m <- mean(x)
+  s <- sd(x)
+  skew <- (n * sum((x - m)^3)) / ((n - 1) * (n - 2) * s^3)
+  kurt <- (n * (n + 1) * sum((x - m)^4)) / ((n - 1) * (n - 2) * (n - 3) * s^4) - (3 * (n - 1)^2) / ((n - 2) * (n - 3))
+  z1 <- skew / sqrt(6 / n)
+  z2 <- kurt / sqrt(24 / n)
+  return(c(skew = skew, z1 = z1, kurt = kurt, z2 = z2))
+}
+
+PrintSampleCharacteristics <- function(x, name = "Вибірка") {
+  x <- x[!is.na(x)]
+  metrics <- calc_shape_metrics(x)
+  cat("====================================================\n")
+  cat(" СТАТИСТИЧНІ ХАРАКТЕРИСТИКИ ДЛЯ:", name, "\n")
+  cat("====================================================\n")
+  cat(sprintf("Обсяг вибірки (n): %d\n", length(x)))
+  cat(sprintf("Мат. сподівання (mean): %.4f\n", mean(x)))
+  cat(sprintf("СКВ (sd): %.4f\n", sd(x)))
+  cat(sprintf("Асиметрія: %.4f (z1 = %.4f)\n", metrics["skew"], metrics["z1"]))
+  cat(sprintf("Ексцес: %.4f (z2 = %.4f)\n", metrics["kurt"], metrics["z2"]))
+  cat("====================================================\n\n")
+}
+
+PrintSampleCharacteristics(df_analysis$x50, "Вибірка n = 100")
+PrintSampleCharacteristics(df_analysis$x1000, "Вибірка n = 1000")
+
+op <- par(mfrow = c(2, 2))
+x_val1 <- df_analysis$x50[!is.na(df_analysis$x50)]
+x_val2 <- df_analysis$x1000
+
+hist(x_val1, freq = FALSE, main = "Гістограма n=100", xlab = "X", col = "lightgrey", border = "darkblue")
+curve(dnorm(x, mean = mean(x_val1), sd = sd(x_val1)), col = "red", lwd = 2, add = TRUE)
+qqnorm(x_val1, main = "Q-Q Plot n = 100", col = "darkblue"); qqline(x_val1, col = "red")
+
+hist(x_val2, freq = FALSE, main = "Гістограма n=1000", xlab = "X", col = "lightgrey", border = "darkgreen")
+curve(dnorm(x, mean = mean(x_val2), sd = sd(x_val2)), col = "red", lwd = 2, add = TRUE)
+qqnorm(x_val2, main = "Q-Q Plot n = 1000", col = "darkgreen"); qqline(x_val2, col = "red")
+par(op)
+
+shapiro_n100 <- shapiro.test(x_val1)
+shapiro_n1000 <- shapiro.test(x_val2)
+ks_n100 <- ks.test(x_val1, "pnorm", mean = mean(x_val1), sd = sd(x_val1))
+ks_n1000 <- ks.test(x_val2, "pnorm", mean = mean(x_val2), sd = sd(x_val2))
+
+hypothesis_table <- data.frame(
+  Критерій = c("Шапіро-Вілка", "Колмогорова-Смирнова"),
+  p_value_n_100 = c(shapiro_n100$p.value, ks_n100$p.value),
+  p_value_n_1000 = c(shapiro_n1000$p.value, ks_n1000$p.value)
+)
+knitr::kable(hypothesis_table, digits = 10, caption = "Результати обчислення p-value")
+```
